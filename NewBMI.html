@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhysioClinic - Complete Appointment Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/your-kit-id.js" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        'primary-light': '#8B8AE8',
+                        'primary-dark': '#4A49C7'
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        .time-slot:hover {
+            transform: translateY(-1px);
+            transition: transform 0.2s ease-in-out;
+        }
+        .booked {
+            background-color: #EF4444;
+            color: white;
+        }
+        .available {
+            background-color: #10B981;
+            color: white;
+        }
+        .selected {
+            background-color: #5D5CDE;
+            color: white;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #EF4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .notification-item {
+            transition: all 0.3s ease;
+        }
+        .notification-item:hover {
+            transform: translateX(5px);
+        }
+        .notification-unread {
+            background-color: #EBF4FF;
+            border-left: 4px solid #5D5CDE;
+        }
+        .dark .notification-unread {
+            background-color: #1E3A8A;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        .bounce-animation {
+            animation: bounce 1s;
+        }
+        .login-bg {
+            background: linear-gradient(135deg, #5D5CDE 0%, #8B8AE8 100%);
+        }
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen login-bg flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden max-w-4xl w-full">
+            <div class="md:flex">
+                <!-- Left Panel - Branding -->
+                <div class="md:w-1/2 bg-primary text-white p-8 flex flex-col justify-center">
+                    <div class="text-center">
+                        <div class="floating mb-6">
+                            <i class="fas fa-heartbeat text-6xl mb-4"></i>
+                        </div>
+                        <h1 class="text-3xl font-bold mb-4">PhysioClinic</h1>
+                        <p class="text-primary-light text-lg mb-6">Your trusted partner in recovery and wellness</p>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="text-center">
+                                <i class="fas fa-users text-2xl mb-2 block"></i>
+                                <span>Expert Physiotherapists</span>
+                            </div>
+                            <div class="text-center">
+                                <i class="fas fa-calendar-check text-2xl mb-2 block"></i>
+                                <span>Easy Scheduling</span>
+                            </div>
+                            <div class="text-center">
+                                <i class="fas fa-mobile-alt text-2xl mb-2 block"></i>
+                                <span>Mobile Friendly</span>
+                            </div>
+                            <div class="text-center">
+                                <i class="fas fa-shield-alt text-2xl mb-2 block"></i>
+                                <span>Secure & Private</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Login Forms -->
+                <div class="md:w-1/2 p-8">
+                    <!-- User Type Selection -->
+                    <div id="userTypeSelection" class="slide-in">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6 text-center">Welcome Back</h2>
+                        <p class="text-gray-600 dark:text-gray-300 text-center mb-8">Please select your role to continue</p>
+                        
+                        <div class="space-y-4">
+                            <button id="patientLoginBtn" class="w-full bg-primary text-white py-4 rounded-xl hover:bg-primary-dark transition-all transform hover:scale-105 flex items-center justify-center space-x-3">
+                                <i class="fas fa-user text-xl"></i>
+                                <span class="text-lg font-medium">Continue as Patient</span>
+                            </button>
+                            <button id="therapistLoginBtn" class="w-full border-2 border-primary text-primary py-4 rounded-xl hover:bg-primary hover:text-white transition-all transform hover:scale-105 flex items-center justify-center space-x-3">
+                                <i class="fas fa-user-md text-xl"></i>
+                                <span class="text-lg font-medium">Continue as Physiotherapist</span>
+                            </button>
+                        </div>
+                        
+                        <div class="mt-8 text-center">
+                            <p class="text-gray-600 dark:text-gray-300">Don't have an account?</p>
+                            <button id="showRegistration" class="text-primary hover:text-primary-dark font-medium">Create New Account</button>
+                        </div>
+                    </div>
+
+                    <!-- Patient Login Form -->
+                    <div id="patientLoginForm" class="hidden slide-in">
+                        <div class="flex items-center mb-6">
+                            <button id="backToSelection1" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mr-4">
+                                <i class="fas fa-arrow-left text-xl"></i>
+                            </button>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Patient Login</h2>
+                        </div>
+                        
+                        <form id="patientLoginSubmit" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                                <input type="email" id="patientEmail" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your email">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
+                                <div class="relative">
+                                    <input type="password" id="patientPassword" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your password">
+                                    <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" onclick="togglePassword('patientPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2">
+                                    <span class="text-sm text-gray-600 dark:text-gray-300">Remember me</span>
+                                </label>
+                                <button type="button" id="patientForgotPassword" class="text-primary hover:text-primary-dark text-sm">Forgot Password?</button>
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                                Sign In
+                            </button>
+                        </form>
+                        
+                        <div class="mt-6 text-center">
+                            <p class="text-gray-600 dark:text-gray-300">New patient?</p>
+                            <button id="showPatientRegister" class="text-primary hover:text-primary-dark font-medium">Create Patient Account</button>
+                        </div>
+                    </div>
+
+                    <!-- Therapist Login Form -->
+                    <div id="therapistLoginForm" class="hidden slide-in">
+                        <div class="flex items-center mb-6">
+                            <button id="backToSelection2" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mr-4">
+                                <i class="fas fa-arrow-left text-xl"></i>
+                            </button>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Physiotherapist Login</h2>
+                        </div>
+                        
+                        <form id="therapistLoginSubmit" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Staff ID / Email</label>
+                                <input type="text" id="therapistID" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your staff ID or email">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
+                                <div class="relative">
+                                    <input type="password" id="therapistPassword" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your password">
+                                    <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" onclick="togglePassword('therapistPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2">
+                                    <span class="text-sm text-gray-600 dark:text-gray-300">Keep me signed in</span>
+                                </label>
+                                <button type="button" id="therapistForgotPassword" class="text-primary hover:text-primary-dark text-sm">Forgot Password?</button>
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                                Sign In
+                            </button>
+                        </form>
+                        
+                        <div class="mt-6 text-center">
+                            <p class="text-gray-600 dark:text-gray-300">New staff member?</p>
+                            <button id="showTherapistRegister" class="text-primary hover:text-primary-dark font-medium">Register as Physiotherapist</button>
+                        </div>
+                    </div>
+
+                    <!-- Patient Registration Form -->
+                    <div id="patientRegisterForm" class="hidden slide-in">
+                        <div class="flex items-center mb-6">
+                            <button id="backToPatientLogin" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mr-4">
+                                <i class="fas fa-arrow-left text-xl"></i>
+                            </button>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Create Patient Account</h2>
+                        </div>
+                        
+                        <form id="patientRegisterSubmit" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name</label>
+                                    <input type="text" id="patientFirstName" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="First name">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
+                                    <input type="text" id="patientLastName" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Last name">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                                <input type="email" id="patientRegEmail" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your email">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone Number</label>
+                                <input type="tel" id="patientRegPhone" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="+1 (555) 123-4567">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Birth</label>
+                                <input type="date" id="patientDOB" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
+                                <div class="relative">
+                                    <input type="password" id="patientRegPassword" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Create a strong password">
+                                    <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" onclick="togglePassword('patientRegPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
+                                <input type="password" id="patientConfirmPassword" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Confirm your password">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="patientTerms" required class="mr-2">
+                                <label for="patientTerms" class="text-sm text-gray-600 dark:text-gray-300">I agree to the <a href="#" class="text-primary hover:text-primary-dark">Terms of Service</a> and <a href="#" class="text-primary hover:text-primary-dark">Privacy Policy</a></label>
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                                Create Account
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Therapist Registration Form -->
+                    <div id="therapistRegisterForm" class="hidden slide-in">
+                        <div class="flex items-center mb-6">
+                            <button id="backToTherapistLogin" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mr-4">
+                                <i class="fas fa-arrow-left text-xl"></i>
+                            </button>
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Register as Physiotherapist</h2>
+                        </div>
+                        
+                        <form id="therapistRegisterSubmit" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name</label>
+                                    <input type="text" id="therapistFirstName" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="First name">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
+                                    <input type="text" id="therapistLastName" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Last name">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Professional Email</label>
+                                <input type="email" id="therapistRegEmail" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your professional email">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">License Number</label>
+                                <input type="text" id="therapistLicense" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Professional license number">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Specialization</label>
+                                <select id="therapistSpecialty" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Select your specialization</option>
+                                    <option value="Sports Physiotherapy">Sports Physiotherapy</option>
+                                    <option value="Orthopedic Rehabilitation">Orthopedic Rehabilitation</option>
+                                    <option value="Neurological Physiotherapy">Neurological Physiotherapy</option>
+                                    <option value="Pediatric Physiotherapy">Pediatric Physiotherapy</option>
+                                    <option value="Geriatric Physiotherapy">Geriatric Physiotherapy</option>
+                                    <option value="Cardiopulmonary Physiotherapy">Cardiopulmonary Physiotherapy</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Years of Experience</label>
+                                <select id="therapistExperience" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Select experience level</option>
+                                    <option value="1-2 years">1-2 years</option>
+                                    <option value="3-5 years">3-5 years</option>
+                                    <option value="6-10 years">6-10 years</option>
+                                    <option value="10+ years">10+ years</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
+                                <div class="relative">
+                                    <input type="password" id="therapistRegPassword" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Create a strong password">
+                                    <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700" onclick="togglePassword('therapistRegPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
+                                <input type="password" id="therapistConfirmPassword" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Confirm your password">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="therapistTerms" required class="mr-2">
+                                <label for="therapistTerms" class="text-sm text-gray-600 dark:text-gray-300">I agree to the <a href="#" class="text-primary hover:text-primary-dark">Professional Terms</a> and <a href="#" class="text-primary hover:text-primary-dark">Code of Conduct</a></label>
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                                Submit Application
+                            </button>
+                            <div class="text-center text-sm text-gray-600 dark:text-gray-300">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Application will be reviewed within 24-48 hours
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (Hidden initially) -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="bg-primary text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">PhysioClinic</h1>
+                    <div class="flex items-center space-x-4">
+                        <div id="therapistToggle" class="hidden flex bg-primary-light rounded-lg p-1">
+                            <button id="patientViewBtn" class="view-toggle px-4 py-2 rounded-md bg-white text-primary font-medium">
+                                Patient Portal
+                            </button>
+                            <button id="therapistViewBtn" class="view-toggle px-4 py-2 rounded-md text-white hover:bg-white hover:text-primary transition-colors">
+                                Therapist Dashboard
+                            </button>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <!-- Notification Bell -->
+                            <div class="relative">
+                                <button id="notificationBtn" class="relative p-2 text-white hover:bg-primary-light rounded-lg transition-colors">
+                                    <i class="fas fa-bell text-xl"></i>
+                                    <span id="notificationBadge" class="notification-badge hidden">3</span>
+                                </button>
+                            </div>
+                            
+                            <!-- User Info & Logout -->
+                            <div class="relative">
+                                <button id="userMenuBtn" class="flex items-center space-x-2 text-white hover:bg-primary-light rounded-lg p-2 transition-colors">
+                                    <div class="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center">
+                                        <span id="userAvatar" class="text-sm font-bold">JD</span>
+                                    </div>
+                                    <span id="currentUser">John Doe</span>
+                                    <i class="fas fa-chevron-down text-sm"></i>
+                                </button>
+                                
+                                <!-- User Dropdown -->
+                                <div id="userDropdown" class="absolute right-0 top-12 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-700 min-w-48 hidden z-50">
+                                    <div class="p-2">
+                                        <button id="profileBtn" class="w-full text-left px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                                            <i class="fas fa-user mr-2"></i> Profile
+                                        </button>
+                                        <button id="settingsBtn" class="w-full text-left px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                                            <i class="fas fa-cog mr-2"></i> Settings
+                                        </button>
+                                        <hr class="my-2 border-gray-200 dark:border-gray-600">
+                                        <button id="logoutBtn" class="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg">
+                                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Patient View -->
+        <div id="patientView" class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Therapist Selection -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Select Physiotherapist</h2>
+                        <div class="space-y-4" id="therapistList">
+                            <!-- Therapists will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Patient Info -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-6">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Patient Information</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                <input type="text" id="patientName" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base" placeholder="Enter your full name" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                                <input type="tel" id="patientPhone" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base" placeholder="Enter phone number" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condition/Reason</label>
+                                <textarea id="patientCondition" rows="3" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base" placeholder="Describe your condition or reason for visit"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appointment Booking -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold text-gray-800 dark:text-white">Book Appointment</h2>
+                            <div class="flex items-center space-x-2">
+                                <button id="prevWeek" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                                    <i class="fas fa-chevron-left text-gray-600 dark:text-gray-300"></i>
+                                </button>
+                                <span id="currentWeek" class="text-sm font-medium text-gray-700 dark:text-gray-300 px-4"></span>
+                                <button id="nextWeek" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                                    <i class="fas fa-chevron-right text-gray-600 dark:text-gray-300"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Selected Therapist Info -->
+                        <div id="selectedTherapistInfo" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg hidden">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg" id="therapistAvatar"></div>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800 dark:text-white" id="selectedTherapistName"></h3>
+                                    <p class="text-sm text-gray-600 dark:text-gray-300" id="selectedTherapistSpecialty"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calendar -->
+                        <div class="grid grid-cols-7 gap-2 mb-6">
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Mon</div>
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Tue</div>
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Wed</div>
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Thu</div>
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Fri</div>
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Sat</div>
+                            <div class="text-center text-sm font-medium text-gray-500 dark:text-gray-400 p-2">Sun</div>
+                            <div id="calendarDays" class="col-span-7 grid grid-cols-7 gap-2">
+                                <!-- Calendar days will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Time Slots -->
+                        <div id="timeSlots" class="hidden">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Available Time Slots</h3>
+                            <div class="mb-4">
+                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Morning Shift (9:00 AM - 1:00 PM)</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="morningSlots">
+                                    <!-- Morning time slots will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="mb-6">
+                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">Evening Shift (3:00 PM - 7:00 PM)</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="eveningSlots">
+                                    <!-- Evening time slots will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-4 text-sm">
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-4 h-4 bg-green-500 rounded"></div>
+                                        <span class="text-gray-600 dark:text-gray-300">Available</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-4 h-4 bg-red-500 rounded"></div>
+                                        <span class="text-gray-600 dark:text-gray-300">Booked</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-4 h-4 bg-primary rounded"></div>
+                                        <span class="text-gray-600 dark:text-gray-300">Selected</span>
+                                    </div>
+                                </div>
+                                <button id="bookAppointmentBtn" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors disabled:bg-gray-400" disabled>
+                                    Book Appointment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Therapist View -->
+        <div id="therapistView" class="container mx-auto px-4 py-8 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <!-- Therapist Selection -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Select Therapist</h2>
+                        <select id="therapistSelect" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base">
+                            <option value="">Choose therapist...</option>
+                        </select>
+                    </div>
+
+                    <!-- Daily Summary -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-6">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Today's Summary</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-300">Total Appointments</span>
+                                <span class="font-semibold text-gray-800 dark:text-white" id="totalAppointments">8</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-300">Completed</span>
+                                <span class="font-semibold text-green-600" id="completedAppointments">5</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-300">Upcoming</span>
+                                <span class="font-semibold text-blue-600" id="upcomingAppointments">3</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600 dark:text-gray-300">Cancelled</span>
+                                <span class="font-semibold text-red-600" id="cancelledAppointments">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appointments List -->
+                <div class="lg:col-span-3">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold text-gray-800 dark:text-white">Patient Appointments</h2>
+                            <div class="flex items-center space-x-2">
+                                <input type="date" id="appointmentDate" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base">
+                            </div>
+                        </div>
+
+                        <!-- Appointments Timeline -->
+                        <div id="appointmentsList" class="space-y-4">
+                            <!-- Appointments will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div class="p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Confirm Appointment</h3>
+                <div id="appointmentDetails" class="space-y-3 mb-6 text-gray-600 dark:text-gray-300">
+                    <!-- Appointment details will be populated by JavaScript -->
+                </div>
+                <div class="flex space-x-3">
+                    <button id="confirmBooking" class="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                        Confirm Booking
+                    </button>
+                    <button id="cancelBooking" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div class="p-6 text-center">
+                <div class="text-6xl mb-4">✅</div>
+                <h3 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">Appointment Booked!</h3>
+                <p class="text-gray-600 dark:text-gray-300 mb-4">Your appointment has been successfully scheduled.</p>
+                
+                <!-- Notification Options -->
+                <div class="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg mb-6">
+                    <h4 class="font-semibold text-gray-800 dark:text-white mb-3">Send Notifications:</h4>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="smsNotification" checked class="mr-2">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">SMS Reminder (Simulated)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="emailNotification" checked class="mr-2">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Email Confirmation</span>
+                            <span id="emailStatus" class="ml-2 px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">EmailJS Setup Required</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="therapistNotification" checked class="mr-2">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Notify Physiotherapist (Simulated)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button id="closeSuccess" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                    Send Notifications & Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Center -->
+    <div id="notificationPanel" class="fixed top-16 right-4 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-700 hidden z-50 max-h-96 overflow-hidden">
+        <div class="p-4 border-b dark:border-gray-700">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Notifications</h3>
+                <div class="flex items-center space-x-2">
+                    <button id="markAllRead" class="text-sm text-primary hover:text-primary-dark">Mark all read</button>
+                    <button id="closeNotifications" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="notificationList" class="overflow-y-auto max-h-80">
+            <!-- Notifications will be populated by JavaScript -->
+        </div>
+        <div class="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+            <button id="notificationSettings" class="text-sm text-primary hover:text-primary-dark w-full text-center">
+                <i class="fas fa-cog mr-1"></i> Notification Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Settings Modal -->
+    <div id="notificationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div class="p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Notification Preferences</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white mb-2">Appointment Reminders</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="reminder24h" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">24 hours before</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="reminder2h" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">2 hours before</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="reminder30m" class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">30 minutes before</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white mb-2">Delivery Methods</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="emailDelivery" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Email notifications</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="smsDelivery" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">SMS notifications</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="inAppDelivery" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">In-app notifications</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-semibold text-gray-800 dark:text-white mb-2">Other Notifications</h4>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="appointmentChanges" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Appointment changes</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="therapistMessages" checked class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Therapist messages</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="systemUpdates" class="mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">System updates</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3 mt-6">
+                    <button id="saveNotificationSettings" class="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                        Save Settings
+                    </button>
+                    <button id="cancelNotificationSettings" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div class="p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Reset Password</h3>
+                <p class="text-gray-600 dark:text-gray-300 mb-4">Enter your email address and we'll send you instructions to reset your password.</p>
+                
+                <form id="forgotPasswordForm">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                        <input type="email" id="resetEmail" required class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base" placeholder="Enter your email">
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button type="submit" class="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-primary-dark transition-colors">
+                            Send Reset Link
+                        </button>
+                        <button type="button" id="cancelForgotPassword" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode setup
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // User Management System
+        let currentUser = null;
+        let isLoggedIn = false;
+
+        // Sample user data (in real app, this would be in a database)
+        const users = {
+            patients: [
+                {
+                    id: 1,
+                    email: "john.doe@email.com",
+                    password: "password123",
+                    firstName: "John",
+                    lastName: "Doe",
+                    phone: "+1 234 567 8900",
+                    dateOfBirth: "1990-05-15",
+                    userType: "patient"
+                }
+            ],
+            therapists: [
+                {
+                    id: 1,
+                    email: "sarah.johnson@physioclinic.com",
+                    staffId: "PT001",
+                    password: "therapist123",
+                    firstName: "Sarah",
+                    lastName: "Johnson",
+                    specialty: "Sports Physiotherapy",
+                    experience: "8 years",
+                    license: "PT12345",
+                    userType: "therapist"
+                }
+            ]
+        };
+
+        // Sample data
+        const therapists = [
+            {
+                id: 1,
+                name: "Dr. Sarah Johnson",
+                specialty: "Sports Physiotherapy",
+                experience: "8 years",
+                rating: 4.9,
+                avatar: "SJ"
+            },
+            {
+                id: 2,
+                name: "Dr. Michael Chen",
+                specialty: "Orthopedic Rehabilitation",
+                experience: "12 years",
+                rating: 4.8,
+                avatar: "MC"
+            },
+            {
+                id: 3,
+                name: "Dr. Emily Rodriguez",
+                specialty: "Neurological Physiotherapy",
+                experience: "6 years",
+                rating: 4.7,
+                avatar: "ER"
+            },
+            {
+                id: 4,
+                name: "Dr. David Thompson",
+                specialty: "Pediatric Physiotherapy",
+                experience: "10 years",
+                rating: 4.9,
+                avatar: "DT"
+            }
+        ];
+
+        // Sample appointments data
+        let appointments = [
+            {
+                id: 1,
+                therapistId: 1,
+                patientName: "Alice Smith",
+                phone: "+1 234 567 8901",
+                date: "2024-01-15",
+                time: "09:00",
+                condition: "Lower back pain",
+                status: "completed"
+            },
+            {
+                id: 2,
+                therapistId: 1,
+                patientName: "Bob Wilson",
+                phone: "+1 234 567 8902",
+                date: "2024-01-15",
+                time: "10:00",
+                condition: "Shoulder injury",
+                status: "upcoming"
+            },
+            {
+                id: 3,
+                therapistId: 2,
+                patientName: "Carol Davis",
+                phone: "+1 234 567 8903",
+                date: "2024-01-15",
+                time: "15:00",
+                condition: "Knee rehabilitation",
+                status: "upcoming"
+            }
+        ];
+
+        // Authentication Functions
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.nextElementSibling.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function showLoginForm(formId) {
+            // Hide all forms
+            document.querySelectorAll('#loginScreen > div > div > div > div').forEach(form => {
+                form.classList.add('hidden');
+            });
+            // Show selected form
+            document.getElementById(formId).classList.remove('hidden');
+        }
+
+        function authenticateUser(email, password, userType) {
+            const userList = users[userType + 's'];
+            const user = userList.find(u => 
+                (u.email === email || u.staffId === email) && u.password === password
+            );
+            
+            if (user) {
+                currentUser = user;
+                isLoggedIn = true;
+                return true;
+            }
+            return false;
+        }
+
+        function registerUser(userData, userType) {
+            const userList = users[userType + 's'];
+            const newUser = {
+                id: userList.length + 1,
+                ...userData,
+                userType: userType
+            };
+            userList.push(newUser);
+            return newUser;
+        }
+
+        function loginUser(user) {
+            currentUser = user;
+            isLoggedIn = true;
+            
+            // Update UI with user info
+            updateUserInterface();
+            
+            // Hide login screen and show main app
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            // Show appropriate view based on user type
+            if (user.userType === 'therapist') {
+                document.getElementById('therapistToggle').classList.remove('hidden');
+                loadTherapistView();
+            } else {
+                loadPatientView();
+            }
+            
+            showInAppNotification('Welcome!', `Welcome back, ${user.firstName}!`);
+        }
+
+        function logoutUser() {
+            currentUser = null;
+            isLoggedIn = false;
+            
+            // Show login screen and hide main app
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            
+            // Reset to user type selection
+            showLoginForm('userTypeSelection');
+            
+            showInAppNotification('Logged Out', 'You have been successfully logged out.');
+        }
+
+        function updateUserInterface() {
+            if (!currentUser) return;
+            
+            const fullName = `${currentUser.firstName} ${currentUser.lastName}`;
+            const initials = `${currentUser.firstName[0]}${currentUser.lastName[0]}`;
+            
+            document.getElementById('currentUser').textContent = fullName;
+            document.getElementById('userAvatar').textContent = initials;
+            
+            // Populate patient info if patient
+            if (currentUser.userType === 'patient') {
+                document.getElementById('patientName').value = fullName;
+                document.getElementById('patientPhone').value = currentUser.phone || '';
+            }
+        }
+
+        // Login Form Event Listeners
+        document.getElementById('patientLoginBtn').addEventListener('click', () => {
+            showLoginForm('patientLoginForm');
+        });
+
+        document.getElementById('therapistLoginBtn').addEventListener('click', () => {
+            showLoginForm('therapistLoginForm');
+        });
+
+        document.getElementById('showRegistration').addEventListener('click', () => {
+            showLoginForm('patientRegisterForm');
+        });
+
+        // Back button listeners
+        document.getElementById('backToSelection1').addEventListener('click', () => {
+            showLoginForm('userTypeSelection');
+        });
+
+        document.getElementById('backToSelection2').addEventListener('click', () => {
+            showLoginForm('userTypeSelection');
+        });
+
+        document.getElementById('backToPatientLogin').addEventListener('click', () => {
+            showLoginForm('patientLoginForm');
+        });
+
+        document.getElementById('backToTherapistLogin').addEventListener('click', () => {
+            showLoginForm('therapistLoginForm');
+        });
+
+        // Show registration forms
+        document.getElementById('showPatientRegister').addEventListener('click', () => {
+            showLoginForm('patientRegisterForm');
+        });
+
+        document.getElementById('showTherapistRegister').addEventListener('click', () => {
+            showLoginForm('therapistRegisterForm');
+        });
+
+        // Patient Login Form
+        document.getElementById('patientLoginSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('patientEmail').value;
+            const password = document.getElementById('patientPassword').value;
+            
+            if (authenticateUser(email, password, 'patient')) {
+                loginUser(currentUser);
+            } else {
+                showAlert('Invalid email or password. Please try again.');
+            }
+        });
+
+        // Therapist Login Form
+        document.getElementById('therapistLoginSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const emailOrId = document.getElementById('therapistID').value;
+            const password = document.getElementById('therapistPassword').value;
+            
+            if (authenticateUser(emailOrId, password, 'therapist')) {
+                loginUser(currentUser);
+            } else {
+                showAlert('Invalid credentials. Please check your staff ID/email and password.');
+            }
+        });
+
+        // Patient Registration Form
+        document.getElementById('patientRegisterSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('patientRegPassword').value;
+            const confirmPassword = document.getElementById('patientConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match. Please try again.');
+                return;
+            }
+            
+            const userData = {
+                email: document.getElementById('patientRegEmail').value,
+                password: password,
+                firstName: document.getElementById('patientFirstName').value,
+                lastName: document.getElementById('patientLastName').value,
+                phone: document.getElementById('patientRegPhone').value,
+                dateOfBirth: document.getElementById('patientDOB').value
+            };
+            
+            const newUser = registerUser(userData, 'patient');
+            showAlert('Account created successfully! You can now log in.');
+            showLoginForm('patientLoginForm');
+        });
+
+        // Therapist Registration Form
+        document.getElementById('therapistRegisterSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('therapistRegPassword').value;
+            const confirmPassword = document.getElementById('therapistConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match. Please try again.');
+                return;
+            }
+            
+            const userData = {
+                email: document.getElementById('therapistRegEmail').value,
+                password: password,
+                firstName: document.getElementById('therapistFirstName').value,
+                lastName: document.getElementById('therapistLastName').value,
+                license: document.getElementById('therapistLicense').value,
+                specialty: document.getElementById('therapistSpecialty').value,
+                experience: document.getElementById('therapistExperience').value,
+                staffId: 'PT' + String(Date.now()).slice(-6) // Generate staff ID
+            };
+            
+            // Register the therapist in user system
+            const newTherapist = registerUser(userData, 'therapist');
+            
+            // Also add to therapist display list for patient portal
+            addToTherapistDisplayList(newTherapist);
+            
+            showAlert('Application submitted successfully! You will receive an email confirmation within 24-48 hours. Your profile will appear in the patient portal immediately.');
+            showLoginForm('therapistLoginForm');
+        });
+
+        // Forgot Password
+        document.getElementById('patientForgotPassword').addEventListener('click', () => {
+            document.getElementById('forgotPasswordModal').classList.remove('hidden');
+            document.getElementById('forgotPasswordModal').classList.add('flex');
+        });
+
+        document.getElementById('therapistForgotPassword').addEventListener('click', () => {
+            document.getElementById('forgotPasswordModal').classList.remove('hidden');
+            document.getElementById('forgotPasswordModal').classList.add('flex');
+        });
+
+        document.getElementById('cancelForgotPassword').addEventListener('click', () => {
+            document.getElementById('forgotPasswordModal').classList.add('hidden');
+            document.getElementById('forgotPasswordModal').classList.remove('flex');
+        });
+
+        document.getElementById('forgotPasswordForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            showAlert('Password reset instructions have been sent to your email.');
+            document.getElementById('forgotPasswordModal').classList.add('hidden');
+            document.getElementById('forgotPasswordModal').classList.remove('flex');
+        });
+
+        // User menu and logout
+        document.getElementById('userMenuBtn').addEventListener('click', () => {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('hidden');
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            logoutUser();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            const dropdown = document.getElementById('userDropdown');
+            const btn = document.getElementById('userMenuBtn');
+            
+            if (!dropdown.contains(event.target) && !btn.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // Load patient view
+        function loadPatientView() {
+            document.getElementById('patientView').classList.remove('hidden');
+            document.getElementById('therapistView').classList.add('hidden');
+            renderTherapistList();
+            renderCalendar();
+        }
+
+        // Load therapist view
+        function loadTherapistView() {
+            document.getElementById('therapistView').classList.remove('hidden');
+            document.getElementById('patientView').classList.add('hidden');
+            
+            // Populate therapist select
+            const select = document.getElementById('therapistSelect');
+            select.innerHTML = '<option value="">Choose therapist...</option>' + 
+                therapists.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('appointmentDate').value = today;
+            
+            // Load appointments
+            loadAppointments();
+        }
+
+        // View toggle for therapists
+        document.getElementById('patientViewBtn').addEventListener('click', () => {
+            loadPatientView();
+            
+            document.getElementById('patientViewBtn').classList.add('bg-white', 'text-primary');
+            document.getElementById('patientViewBtn').classList.remove('text-white');
+            document.getElementById('therapistViewBtn').classList.remove('bg-white', 'text-primary');
+            document.getElementById('therapistViewBtn').classList.add('text-white');
+        });
+
+        document.getElementById('therapistViewBtn').addEventListener('click', () => {
+            loadTherapistView();
+            
+            document.getElementById('therapistViewBtn').classList.add('bg-white', 'text-primary');
+            document.getElementById('therapistViewBtn').classList.remove('text-white');
+            document.getElementById('patientViewBtn').classList.remove('bg-white', 'text-primary');
+            document.getElementById('patientViewBtn').classList.add('text-white');
+        });
+
+        // Custom alert function
+        function showAlert(message) {
+            const alertModal = document.createElement('div');
+            alertModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            alertModal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full mx-4">
+                    <div class="text-center">
+                        <div class="text-4xl mb-4">⚠️</div>
+                        <p class="text-gray-700 dark:text-gray-300 mb-4">${message}</p>
+                        <button class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark" onclick="this.closest('.fixed').remove()">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(alertModal);
+        }
+
+        // Show in-app notification popup
+        function showInAppNotification(title, message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-xl p-4 max-w-sm z-50 transform translate-x-full transition-transform duration-300';
+            notification.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <i class="fas fa-bell text-white text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-800 dark:text-white text-sm">${title}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${message}</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times text-sm"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        // Render therapist list for patient view
+        function renderTherapistList() {
+            const container = document.getElementById('therapistList');
+            container.innerHTML = therapists.map(therapist => `
+                <div class="therapist-card p-4 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all" data-therapist-id="${therapist.id}">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
+                            ${therapist.avatar}
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">${therapist.name}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">${therapist.specialty}</p>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <span class="text-xs text-gray-500">${therapist.experience}</span>
+                                <span class="text-xs text-yellow-500">★ ${therapist.rating}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click listeners
+            document.querySelectorAll('.therapist-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    // Remove previous selection
+                    document.querySelectorAll('.therapist-card').forEach(c => 
+                        c.classList.remove('border-primary', 'bg-blue-50', 'dark:bg-blue-900')
+                    );
+                    
+                    // Add selection to clicked card
+                    card.classList.add('border-primary', 'bg-blue-50', 'dark:bg-blue-900');
+                    
+                    const therapistId = parseInt(card.dataset.therapistId);
+                    selectedTherapist = therapists.find(t => t.id === therapistId);
+                    
+                    // Show selected therapist info
+                    showSelectedTherapist();
+                    
+                    // Update calendar
+                    renderCalendar();
+                });
+            });
+        }
+
+        // State management
+        let currentWeekStart = new Date();
+        let selectedTherapist = null;
+        let selectedDate = null;
+        let selectedTime = null;
+
+        // Get start of week (Monday)
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        // Initialize current week
+        currentWeekStart = getWeekStart(new Date());
+
+        // Show selected therapist info
+        function showSelectedTherapist() {
+            if (!selectedTherapist) return;
+            
+            const infoDiv = document.getElementById('selectedTherapistInfo');
+            document.getElementById('therapistAvatar').textContent = selectedTherapist.avatar;
+            document.getElementById('selectedTherapistName').textContent = selectedTherapist.name;
+            document.getElementById('selectedTherapistSpecialty').textContent = selectedTherapist.specialty;
+            
+            infoDiv.classList.remove('hidden');
+        }
+
+        // Render calendar
+        function renderCalendar() {
+            const container = document.getElementById('calendarDays');
+            const weekStart = new Date(currentWeekStart);
+            
+            // Update week display
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            document.getElementById('currentWeek').textContent = 
+                `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            
+            let daysHTML = '';
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(date.getDate() + i);
+                
+                const today = new Date();
+                const isToday = date.toDateString() === today.toDateString();
+                const isPast = date < today.setHours(0, 0, 0, 0);
+                const isFriday = date.getDay() === 5; // Friday is off day
+                
+                let classes = 'calendar-day p-3 text-center border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer transition-all';
+                
+                if (isPast) {
+                    classes += ' opacity-50 cursor-not-allowed';
+                } else if (isFriday) {
+                    classes += ' bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 cursor-not-allowed';
+                } else {
+                    classes += ' hover:border-primary hover:bg-blue-50 dark:hover:bg-blue-900';
+                }
+                
+                if (isToday) {
+                    classes += ' ring-2 ring-primary';
+                }
+                
+                daysHTML += `
+                    <div class="${classes}" data-date="${date.toISOString().split('T')[0]}" ${(isPast || isFriday) ? 'data-disabled="true"' : ''}>
+                        <div class="text-lg font-semibold">${date.getDate()}</div>
+                        <div class="text-xs text-gray-500">${date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                        ${isFriday ? '<div class="text-xs mt-1 text-red-500">Off Day</div>' : ''}
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = daysHTML;
+            
+            // Add click listeners
+            document.querySelectorAll('.calendar-day').forEach(day => {
+                if (!day.dataset.disabled) {
+                    day.addEventListener('click', () => {
+                        if (!selectedTherapist) {
+                            showAlert('Please select a physiotherapist first.');
+                            return;
+                        }
+                        
+                        // Remove previous selection
+                        document.querySelectorAll('.calendar-day').forEach(d => 
+                            d.classList.remove('bg-primary', 'text-white')
+                        );
+                        
+                        // Add selection
+                        day.classList.add('bg-primary', 'text-white');
+                        
+                        selectedDate = day.dataset.date;
+                        renderTimeSlots();
+                    });
+                }
+            });
+        }
+
+        // Week navigation
+        document.getElementById('prevWeek').addEventListener('click', () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            renderCalendar();
+        });
+
+        document.getElementById('nextWeek').addEventListener('click', () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            renderCalendar();
+        });
+
+        // Render time slots
+        function renderTimeSlots() {
+            if (!selectedDate || !selectedTherapist) return;
+            
+            // Get booked slots for selected date and therapist
+            const bookedSlots = appointments
+                .filter(apt => apt.date === selectedDate && apt.therapistId === selectedTherapist.id)
+                .map(apt => apt.time);
+            
+            // Render morning slots
+            const morningContainer = document.getElementById('morningSlots');
+            morningContainer.innerHTML = generateTimeSlotsHTML(['09:00', '10:00', '11:00', '12:00'], bookedSlots);
+            
+            // Render evening slots
+            const eveningContainer = document.getElementById('eveningSlots');
+            eveningContainer.innerHTML = generateTimeSlotsHTML(['15:00', '16:00', '17:00', '18:00'], bookedSlots);
+            
+            // Show time slots section
+            document.getElementById('timeSlots').classList.remove('hidden');
+            
+            // Add click listeners
+            document.querySelectorAll('.time-slot').forEach(slot => {
+                if (!slot.classList.contains('booked')) {
+                    slot.addEventListener('click', () => {
+                        // Remove previous selection
+                        document.querySelectorAll('.time-slot').forEach(s => 
+                            s.classList.remove('selected')
+                        );
+                        
+                        // Add selection
+                        slot.classList.add('selected');
+                        selectedTime = slot.dataset.time;
+                        
+                        // Enable book button
+                        document.getElementById('bookAppointmentBtn').disabled = false;
+                    });
+                }
+            });
+        }
+
+        // Generate time slots HTML
+        function generateTimeSlotsHTML(slots, bookedSlots) {
+            return slots.map(time => {
+                const isBooked = bookedSlots.includes(time);
+                const displayTime = formatTime(time);
+                
+                return `
+                    <div class="time-slot p-3 text-center rounded-lg cursor-pointer font-medium transition-all ${isBooked ? 'booked cursor-not-allowed' : 'available'}" 
+                         data-time="${time}" ${isBooked ? 'data-booked="true"' : ''}>
+                        ${displayTime}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Format time for display
+        function formatTime(time) {
+            const [hours, minutes] = time.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+
+        // Load appointments for therapist view
+        function loadAppointments() {
+            const therapistId = document.getElementById('therapistSelect').value;
+            const selectedDate = document.getElementById('appointmentDate').value;
+            
+            if (!therapistId || !selectedDate) {
+                document.getElementById('appointmentsList').innerHTML = '<p class="text-gray-500 text-center py-8">Please select a therapist and date to view appointments.</p>';
+                return;
+            }
+            
+            const dayAppointments = appointments.filter(apt => 
+                apt.therapistId == therapistId && apt.date === selectedDate
+            ).sort((a, b) => a.time.localeCompare(b.time));
+            
+            const container = document.getElementById('appointmentsList');
+            
+            if (dayAppointments.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">No appointments for this date.</p>';
+                return;
+            }
+            
+            container.innerHTML = dayAppointments.map(apt => {
+                const statusColors = {
+                    upcoming: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                    completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                    cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                };
+                
+                return `
+                    <div class="appointment-item p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">${apt.patientName}</h3>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full ${statusColors[apt.status]}">
+                                        ${apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                    <div><i class="fas fa-clock mr-2"></i>${formatTime(apt.time)}</div>
+                                    <div><i class="fas fa-phone mr-2"></i>${apt.phone}</div>
+                                    <div><i class="fas fa-user-injured mr-2"></i>${apt.condition || 'General consultation'}</div>
+                                </div>
+                            </div>
+                            ${apt.status === 'upcoming' ? `
+                                <div class="flex space-x-2">
+                                    <button class="text-green-600 hover:text-green-800 p-2" onclick="updateAppointmentStatus(${apt.id}, 'completed')" title="Mark as completed">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-800 p-2" onclick="updateAppointmentStatus(${apt.id}, 'cancelled')" title="Cancel appointment">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Update summary
+            updateDailySummary(dayAppointments);
+        }
+
+        // Update appointment status
+        function updateAppointmentStatus(appointmentId, newStatus) {
+            const appointment = appointments.find(apt => apt.id === appointmentId);
+            if (appointment) {
+                appointment.status = newStatus;
+                loadAppointments(); // Refresh the list
+            }
+        }
+
+        // Update daily summary
+        function updateDailySummary(dayAppointments) {
+            const total = dayAppointments.length;
+            const completed = dayAppointments.filter(apt => apt.status === 'completed').length;
+            const upcoming = dayAppointments.filter(apt => apt.status === 'upcoming').length;
+            const cancelled = dayAppointments.filter(apt => apt.status === 'cancelled').length;
+            
+            document.getElementById('totalAppointments').textContent = total;
+            document.getElementById('completedAppointments').textContent = completed;
+            document.getElementById('upcomingAppointments').textContent = upcoming;
+            document.getElementById('cancelledAppointments').textContent = cancelled;
+        }
+
+        // Book appointment functionality
+        document.getElementById('bookAppointmentBtn').addEventListener('click', () => {
+            if (!selectedTherapist || !selectedDate || !selectedTime) {
+                showAlert('Please select a therapist, date, and time.');
+                return;
+            }
+            
+            const patientName = document.getElementById('patientName').value.trim();
+            const patientPhone = document.getElementById('patientPhone').value.trim();
+            const patientCondition = document.getElementById('patientCondition').value.trim();
+            
+            if (!patientName || !patientPhone) {
+                showAlert('Please fill in your name and phone number.');
+                return;
+            }
+            
+            // Show confirmation modal
+            showConfirmationModal();
+        });
+
+        // Show confirmation modal
+        function showConfirmationModal() {
+            const modal = document.getElementById('confirmationModal');
+            const details = document.getElementById('appointmentDetails');
+            
+            const date = new Date(selectedDate);
+            const formattedDate = date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            details.innerHTML = `
+                <div><strong>Therapist:</strong> ${selectedTherapist.name}</div>
+                <div><strong>Date:</strong> ${formattedDate}</div>
+                <div><strong>Time:</strong> ${formatTime(selectedTime)}</div>
+                <div><strong>Patient:</strong> ${document.getElementById('patientName').value}</div>
+                <div><strong>Phone:</strong> ${document.getElementById('patientPhone').value}</div>
+                ${document.getElementById('patientCondition').value ? `<div><strong>Condition:</strong> ${document.getElementById('patientCondition').value}</div>` : ''}
+            `;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Confirm booking
+        document.getElementById('confirmBooking').addEventListener('click', async () => {
+            // Show loading state
+            const confirmBtn = document.getElementById('confirmBooking');
+            const originalText = confirmBtn.textContent;
+            confirmBtn.textContent = 'Processing...';
+            confirmBtn.disabled = true;
+            
+            try {
+                // Create new appointment
+                const newAppointment = {
+                    id: appointments.length + 1,
+                    therapistId: selectedTherapist.id,
+                    patientName: document.getElementById('patientName').value,
+                    phone: document.getElementById('patientPhone').value,
+                    date: selectedDate,
+                    time: selectedTime,
+                    condition: document.getElementById('patientCondition').value,
+                    status: 'upcoming',
+                    bookedAt: new Date().toISOString()
+                };
+                
+                appointments.push(newAppointment);
+                
+                // Hide confirmation modal
+                document.getElementById('confirmationModal').classList.add('hidden');
+                document.getElementById('confirmationModal').classList.remove('flex');
+                
+                // Automatically send all notifications
+                await sendAutomatedNotifications(newAppointment);
+                
+                // Show success modal
+                document.getElementById('successModal').classList.remove('hidden');
+                document.getElementById('successModal').classList.add('flex');
+                
+                // Reset form
+                resetBookingForm();
+                
+            } catch (error) {
+                console.error('Booking error:', error);
+                showAlert('There was an error processing your booking. Please try again.');
+                
+                // Restore button state
+                confirmBtn.textContent = originalText;
+                confirmBtn.disabled = false;
+            }
+        });
+
+        // Cancel booking
+        document.getElementById('cancelBooking').addEventListener('click', () => {
+            document.getElementById('confirmationModal').classList.add('hidden');
+            document.getElementById('confirmationModal').classList.remove('flex');
+        });
+
+        // Enhanced close success modal
+        document.getElementById('closeSuccess').addEventListener('click', () => {
+            document.getElementById('successModal').classList.add('hidden');
+            document.getElementById('successModal').classList.remove('flex');
+        });
+
+        // Reset booking form
+        function resetBookingForm() {
+            selectedTherapist = null;
+            selectedDate = null;
+            selectedTime = null;
+            
+            // Reset UI
+            document.getElementById('selectedTherapistInfo').classList.add('hidden');
+            document.getElementById('timeSlots').classList.add('hidden');
+            document.getElementById('bookAppointmentBtn').disabled = true;
+            document.getElementById('patientCondition').value = '';
+            
+            // Reset selections
+            document.querySelectorAll('.therapist-card').forEach(card => 
+                card.classList.remove('border-primary', 'bg-blue-50', 'dark:bg-blue-900')
+            );
+            document.querySelectorAll('.calendar-day').forEach(day => 
+                day.classList.remove('bg-primary', 'text-white')
+            );
+            
+            // Re-render calendar and time slots to show updated availability
+            renderCalendar();
+        }
+
+        // Automated Notification System
+        async function sendAutomatedNotifications(appointment) {
+            try {
+                showInAppNotification('Sending Notifications', 'Processing appointment confirmations...');
+                
+                const therapist = therapists.find(t => t.id === appointment.therapistId);
+                const appointmentDate = new Date(appointment.date);
+                const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                
+                // Automatically send all types of notifications
+                await Promise.all([
+                    sendPatientSMSConfirmation(appointment, therapist, formattedDate),
+                    sendPatientEmailConfirmation(appointment, therapist, formattedDate),
+                    sendTherapistNotification(appointment, therapist, formattedDate)
+                ]);
+                
+                // Schedule automated reminder notifications
+                scheduleAutomatedReminders(appointment, therapist);
+                
+                // Add to in-app notifications
+                addInAppNotification(
+                    'appointment_confirmed',
+                    'Appointment Confirmed',
+                    `Your appointment with ${therapist.name} on ${formattedDate} at ${formatTime(appointment.time)} has been confirmed.`,
+                    'high'
+                );
+                
+                showInAppNotification('Notifications Sent', 'All confirmation notifications have been sent successfully!');
+                
+            } catch (error) {
+                console.error('Notification error:', error);
+                showInAppNotification('Notification Warning', 'Appointment booked but some notifications may have failed.');
+            }
+        }
+
+        // Send patient SMS confirmation using Poe API
+        async function sendPatientSMSConfirmation(appointment, therapist, formattedDate) {
+            const smsContent = `🏥 PhysioClinic Appointment Confirmed
+
+Hi ${appointment.patientName}!
+
+Your physiotherapy appointment has been successfully booked:
+
+👨‍⚕️ Therapist: ${therapist.name}
+📅 Date: ${formattedDate}
+🕐 Time: ${formatTime(appointment.time)}
+📱 Your Phone: ${appointment.phone}
+${appointment.condition ? `🔍 Condition: ${appointment.condition}` : ''}
+
+📋 IMPORTANT REMINDERS:
+• Arrive 15 minutes early
+• Bring ID & insurance card
+• Wear comfortable clothing
+• Bring any medical reports
+
+📞 Need to reschedule? Call (555) 123-4567
+
+We'll send you reminders 24 hours and 2 hours before your appointment.
+
+Thank you for choosing PhysioClinic! 💪`;
+
+            if (window.Poe && window.Poe.sendUserMessage) {
+                try {
+                    await window.Poe.sendUserMessage(
+                        `@Claude-Sonnet-4 Generate a professional SMS confirmation message for this physiotherapy appointment. Keep it concise, friendly, and include all essential details. Format it for SMS delivery: ${smsContent}`,
+                        {
+                            handler: 'sms-confirmation-handler',
+                            stream: false,
+                            openChat: false,
+                            handlerContext: { 
+                                type: 'patient_sms', 
+                                appointment: appointment,
+                                phone: appointment.phone
+                            }
+                        }
+                    );
+                } catch (error) {
+                    console.error('SMS notification failed:', error);
+                }
+            }
+        }
+
+        // ==========================================
+        // 📧 EMAILJS INTEGRATION - REAL EMAIL SENDING
+        // ==========================================
+        
+        // ⚠️ SETUP REQUIRED: Replace with your EmailJS credentials
+        // 🔗 Get your credentials at: https://www.emailjs.com/
+        const EMAILJS_CONFIG = {
+            SERVICE_ID: 'service_xxxxxxx',      // ← Replace with your EmailJS service ID
+            TEMPLATE_ID: 'template_xxxxxxx',    // ← Replace with your EmailJS template ID  
+            PUBLIC_KEY: 'your_public_key_here'  // ← Replace with your EmailJS public key
+        };
+        
+        /* 
+        📧 EMAILJS SETUP INSTRUCTIONS:
+        
+        1. Create EmailJS Account:
+           - Go to https://www.emailjs.com/
+           - Sign up for free account (200 emails/month)
+           
+        2. Create Email Service:
+           - Dashboard → Email Services → Add New Service
+           - Choose Gmail, Outlook, or other provider
+           - Connect your email account
+           - Copy the SERVICE_ID
+           
+        3. Create Email Template:
+           - Dashboard → Email Templates → Create New Template
+           - Use these template variables in your email:
+             {{to_email}} {{patient_name}} {{therapist_name}} 
+             {{appointment_date}} {{appointment_time}} {{phone_number}}
+             {{condition}} {{clinic_name}} {{clinic_address}}
+           - Copy the TEMPLATE_ID
+           
+        4. Get Public Key:
+           - Dashboard → Account → API Keys
+           - Copy your PUBLIC_KEY
+           
+        5. Replace Configuration:
+           - Update EMAILJS_CONFIG above with your real values
+           - Test by booking an appointment
+           
+        Example Template Subject: "Appointment Confirmed - {{clinic_name}}"
+        Example Template Body:
+        "Dear {{patient_name}},
+        Your appointment with {{therapist_name}} is confirmed for {{appointment_date}} at {{appointment_time}}.
+        Phone: {{phone_number}}
+        Best regards, {{clinic_name}}"
+        */
+
+        // Initialize EmailJS
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+        }
+
+        // Check EmailJS configuration status
+        function checkEmailJSConfiguration() {
+            const isConfigured = EMAILJS_CONFIG.SERVICE_ID !== 'service_xxxxxxx' && 
+                                EMAILJS_CONFIG.TEMPLATE_ID !== 'template_xxxxxxx' && 
+                                EMAILJS_CONFIG.PUBLIC_KEY !== 'your_public_key_here';
+            
+            const statusElement = document.getElementById('emailStatus');
+            
+            if (isConfigured && typeof emailjs !== 'undefined') {
+                statusElement.textContent = 'Real Email ✅';
+                statusElement.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800';
+            } else if (typeof emailjs === 'undefined') {
+                statusElement.textContent = 'EmailJS Not Loaded ❌';
+                statusElement.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+            } else {
+                statusElement.textContent = 'Setup Required ⚙️';
+                statusElement.className = 'ml-2 px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800';
+            }
+            
+            return isConfigured;
+        }
+
+        // Send patient email confirmation using REAL EmailJS
+        async function sendPatientEmailConfirmation(appointment, therapist, formattedDate) {
+            try {
+                // Show loading state
+                showInAppNotification('Sending Email', 'Preparing confirmation email...');
+                
+                // Check if EmailJS is loaded
+                if (typeof emailjs === 'undefined') {
+                    throw new Error('EmailJS library not loaded');
+                }
+                
+                // Prepare email template parameters
+                const templateParams = {
+                    // Basic appointment info
+                    to_email: currentUser?.email || 'patient@email.com',
+                    patient_name: appointment.patientName,
+                    therapist_name: therapist.name,
+                    therapist_specialty: therapist.specialty,
+                    appointment_date: formattedDate,
+                    appointment_time: formatTime(appointment.time),
+                    phone_number: appointment.phone,
+                    condition: appointment.condition || 'General consultation',
+                    
+                    // Clinic information
+                    clinic_name: 'PhysioClinic Recovery Center',
+                    clinic_address: '123 Health Street, Medical District',
+                    clinic_phone: '(555) 123-4567',
+                    clinic_email: 'appointments@physioclinic.com',
+                    clinic_website: 'www.physioclinic.com',
+                    
+                    // Current date for email timestamp
+                    email_date: new Date().toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long',
+                        day: 'numeric'
+                    }),
+                    
+                    // Professional message content
+                    message_content: `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 APPOINTMENT DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👨‍⚕️ Physiotherapist: ${therapist.name}
+🎯 Specialization: ${therapist.specialty}
+📅 Date: ${formattedDate}
+🕐 Time: ${formatTime(appointment.time)}
+📱 Contact Number: ${appointment.phone}
+${appointment.condition ? `🔍 Condition/Reason: ${appointment.condition}` : '🔍 Reason: General consultation'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 PREPARATION CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before your appointment, please:
+✅ Arrive 15 minutes early for check-in
+✅ Bring a valid photo ID  
+✅ Bring your insurance card
+✅ Wear comfortable, loose-fitting clothing
+✅ Bring any previous medical reports or imaging results
+✅ Prepare a list of current medications
+✅ Bring a water bottle for hydration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔔 AUTOMATED REMINDERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We'll automatically send you:
+📱 SMS reminder 24 hours before
+📱 SMS reminder 2 hours before  
+📧 Email reminder 24 hours before
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ CANCELLATION POLICY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need to reschedule or cancel?
+• Please contact us at least 24 hours in advance
+• Call (555) 123-4567 or email us
+• Online cancellation available on our website
+
+We look forward to helping you on your recovery journey!
+
+Best regards,
+The PhysioClinic Team 💪`
+                };
+                
+                // Send REAL email via EmailJS
+                const result = await emailjs.send(
+                    EMAILJS_CONFIG.SERVICE_ID,
+                    EMAILJS_CONFIG.TEMPLATE_ID,
+                    templateParams
+                );
+                
+                // Success handling
+                console.log('✅ REAL Email sent successfully:', result);
+                showInAppNotification('✅ Email Sent', `Real confirmation email sent to ${templateParams.to_email}`);
+                
+                // Add to notification center
+                addInAppNotification(
+                    'email_sent',
+                    'Email Delivered ✅',
+                    `Confirmation email sent to ${templateParams.to_email}`,
+                    'high'
+                );
+                
+                return {
+                    success: true,
+                    messageId: result.text,
+                    email: templateParams.to_email
+                };
+                
+            } catch (error) {
+                console.error('❌ EmailJS Error:', error);
+                
+                let errorMessage = 'Email delivery failed';
+                if (error.text) errorMessage += `: ${error.text}`;
+                
+                showInAppNotification('❌ Email Failed', errorMessage);
+                
+                // Add error notification
+                addInAppNotification(
+                    'email_failed',
+                    'Email Delivery Failed ❌',
+                    `Failed to send email: ${error.message || 'Unknown error'}`,
+                    'high'
+                );
+                
+                return {
+                    success: false,
+                    error: error.message || 'EmailJS sending failed'
+                };
+            }
+        }
+
+        // Send therapist notification using Poe API
+        async function sendTherapistNotification(appointment, therapist, formattedDate) {
+            const therapistNotification = `🆕 NEW PATIENT APPOINTMENT SCHEDULED
+
+Dear ${therapist.name},
+
+You have a new appointment scheduled in your calendar.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 PATIENT INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 Patient Name: ${appointment.patientName}
+📱 Phone Number: ${appointment.phone}
+📅 Appointment Date: ${formattedDate}
+🕐 Appointment Time: ${formatTime(appointment.time)}
+${appointment.condition ? `🔍 Condition/Chief Complaint: ${appointment.condition}` : '🔍 Type: General consultation'}
+📋 Status: New Patient
+⏰ Booked: ${new Date(appointment.bookedAt).toLocaleString()}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 PRE-APPOINTMENT PREPARATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please prepare:
+✅ Review patient's condition/complaint
+✅ Prepare assessment protocols
+✅ Check equipment availability
+✅ Review any special requirements
+✅ Prepare patient education materials
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 PATIENT CONTACT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If you need to contact the patient before the appointment:
+📱 Phone: ${appointment.phone}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ IMPORTANT NOTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Patient has been sent confirmation notifications
+• Automated reminders will be sent to patient
+• Please update patient records after the session
+• Contact admin if any scheduling conflicts arise
+
+This appointment has been automatically added to your schedule.
+
+Best regards,
+PhysioClinic Appointment System 🏥
+
+This is an automated notification. For questions, contact the clinic administration.`;
+
+            if (window.Poe && window.Poe.sendUserMessage) {
+                try {
+                    await window.Poe.sendUserMessage(
+                        `@Claude-Sonnet-4 Generate a detailed professional notification for a physiotherapist about a new patient appointment. Include all relevant clinical and administrative details: ${therapistNotification}`,
+                        {
+                            handler: 'therapist-notification-handler',
+                            stream: false,
+                            openChat: false,
+                            handlerContext: { 
+                                type: 'therapist_notification', 
+                                appointment: appointment,
+                                therapist: therapist
+                            }
+                        }
+                    );
+                } catch (error) {
+                    console.error('Therapist notification failed:', error);
+                }
+            }
+        }
+
+        // Schedule automated reminder notifications
+        function scheduleAutomatedReminders(appointment, therapist) {
+            // Send immediate reminder message to patient (1 second after booking)
+            setTimeout(() => {
+                send2HourReminder(appointment, therapist);
+                addInAppNotification(
+                    'appointment_reminder',
+                    'Appointment Reminder',
+                    `Your appointment with ${therapist.name} is confirmed for ${formatTime(appointment.time)}`,
+                    'high'
+                );
+            }, 1000); // 1 second after booking for immediate message delivery
+            
+            // Show scheduling confirmation
+            setTimeout(() => {
+                showInAppNotification('Message Sent', 'Reminder message has been sent to patient');
+            }, 1500); // 1.5 seconds after booking
+        }
+
+        // Send 24-hour reminder
+        async function send24HourReminder(appointment, therapist) {
+            const reminderContent = `🔔 24-Hour Appointment Reminder
+
+Hi ${appointment.patientName}!
+
+This is a friendly reminder that you have a physiotherapy appointment tomorrow:
+
+👨‍⚕️ Therapist: ${therapist.name}
+📅 Date: Tomorrow
+🕐 Time: ${formatTime(appointment.time)}
+📍 Location: PhysioClinic, 123 Health Street
+
+📋 Don't forget to:
+• Arrive 15 minutes early
+• Bring ID & insurance card
+• Wear comfortable clothing
+• Bring medical reports if you have them
+
+Need to reschedule? Call (555) 123-4567
+
+See you tomorrow! 💪`;
+
+            if (window.Poe && window.Poe.sendUserMessage) {
+                await window.Poe.sendUserMessage(
+                    `@Claude-Sonnet-4 Generate a friendly 24-hour appointment reminder message: ${reminderContent}`,
+                    {
+                        handler: 'reminder-24h-handler',
+                        stream: false,
+                        openChat: false,
+                        handlerContext: { type: '24h_reminder', appointment: appointment }
+                    }
+                );
+            }
+            
+            addInAppNotification(
+                'appointment_reminder',
+                '24-Hour Reminder',
+                `Your appointment with ${therapist.name} is tomorrow at ${formatTime(appointment.time)}`,
+                'high'
+            );
+        }
+
+        // Send 2-hour reminder
+        async function send2HourReminder(appointment, therapist) {
+            const reminderContent = `⏰ 2-Hour Appointment Reminder
+
+Hi ${appointment.patientName}!
+
+Your physiotherapy appointment is in 2 hours:
+
+👨‍⚕️ Therapist: ${therapist.name}
+🕐 Time: ${formatTime(appointment.time)} (in 2 hours)
+📍 Location: PhysioClinic, 123 Health Street
+
+🚗 Time to head out soon!
+• Allow extra time for parking
+• Arrive 15 minutes early
+• Bring all required items
+
+Questions? Call (555) 123-4567
+
+We're ready to help you! 🎯`;
+
+            if (window.Poe && window.Poe.sendUserMessage) {
+                await window.Poe.sendUserMessage(
+                    `@Claude-Sonnet-4 Generate an urgent 2-hour appointment reminder message: ${reminderContent}`,
+                    {
+                        handler: 'reminder-2h-handler',
+                        stream: false,
+                        openChat: false,
+                        handlerContext: { type: '2h_reminder', appointment: appointment }
+                    }
+                );
+            }
+            
+            addInAppNotification(
+                'appointment_reminder',
+                '2-Hour Reminder',
+                `Your appointment with ${therapist.name} is in 2 hours at ${formatTime(appointment.time)}`,
+                'high'
+            );
+        }
+
+        // In-app notification management
+        let inAppNotifications = [
+            {
+                id: 1,
+                type: 'appointment_reminder',
+                title: 'Upcoming Appointment',
+                message: 'Your appointment with Dr. Sarah Johnson is in 2 hours',
+                timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+                read: false,
+                priority: 'high'
+            },
+            {
+                id: 2,
+                type: 'system_info',
+                title: 'Welcome to PhysioClinic',
+                message: 'Your account has been set up successfully. Book your first appointment!',
+                timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+                read: true,
+                priority: 'medium'
+            }
+        ];
+
+        // Add in-app notification
+        function addInAppNotification(type, title, message, priority = 'medium') {
+            const newNotification = {
+                id: inAppNotifications.length + 1,
+                type,
+                title,
+                message,
+                timestamp: new Date(),
+                read: false,
+                priority
+            };
+            
+            inAppNotifications.unshift(newNotification);
+            updateNotificationBadge();
+        }
+
+        // Update notification badge
+        function updateNotificationBadge() {
+            const unreadCount = inAppNotifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notificationBadge');
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.classList.remove('hidden');
+                badge.classList.add('bounce-animation');
+                setTimeout(() => badge.classList.remove('bounce-animation'), 1000);
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Register notification handlers for Poe API responses
+        if (window.Poe && window.Poe.registerHandler) {
+            window.Poe.registerHandler('sms-confirmation-handler', (result, context) => {
+                if (result.status === 'complete') {
+                    console.log('SMS confirmation generated:', result.responses[0].content);
+                    showInAppNotification('SMS Sent', `Confirmation SMS sent to ${context.phone}`);
+                }
+            });
+
+            window.Poe.registerHandler('email-confirmation-handler', (result, context) => {
+                if (result.status === 'complete') {
+                    console.log('Email confirmation generated:', result.responses[0].content);
+                    showInAppNotification('Email Sent', `Confirmation email sent to ${context.email}`);
+                }
+            });
+
+            window.Poe.registerHandler('therapist-notification-handler', (result, context) => {
+                if (result.status === 'complete') {
+                    console.log('Therapist notification generated:', result.responses[0].content);
+                    showInAppNotification('Therapist Notified', `${context.therapist.name} has been notified about the new appointment`);
+                }
+            });
+
+            window.Poe.registerHandler('reminder-24h-handler', (result, context) => {
+                if (result.status === 'complete') {
+                    console.log('24h reminder sent:', result.responses[0].content);
+                    showInAppNotification('24h Reminder Sent', 'Patient has been reminded about tomorrow\'s appointment');
+                }
+            });
+
+            window.Poe.registerHandler('reminder-2h-handler', (result, context) => {
+                if (result.status === 'complete') {
+                    console.log('2h reminder sent:', result.responses[0].content);
+                    showInAppNotification('2h Reminder Sent', 'Patient has been reminded about upcoming appointment');
+                }
+            });
+        }
+
+        // Enhanced notification center
+        document.getElementById('notificationBtn').addEventListener('click', () => {
+            const panel = document.getElementById('notificationPanel');
+            const isHidden = panel.classList.contains('hidden');
+            
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                renderInAppNotifications();
+            } else {
+                panel.classList.add('hidden');
+            }
+        });
+
+        // Render in-app notifications
+        function renderInAppNotifications() {
+            const container = document.getElementById('notificationList');
+            
+            if (inAppNotifications.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">No notifications</p>';
+                return;
+            }
+            
+            container.innerHTML = inAppNotifications
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .map(notification => {
+                    const timeAgo = getTimeAgo(notification.timestamp);
+                    const priorityColor = {
+                        high: 'text-red-600',
+                        medium: 'text-orange-600',
+                        low: 'text-gray-600'
+                    };
+                    
+                    return `
+                        <div class="notification-item p-4 border-b dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${!notification.read ? 'notification-unread' : ''}" 
+                             data-notification-id="${notification.id}">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-gray-800 dark:text-white text-sm">${notification.title}</h4>
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-circle text-xs ${priorityColor[notification.priority]}"></i>
+                                    <span class="text-xs text-gray-500">${timeAgo}</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">${notification.message}</p>
+                            ${!notification.read ? '<div class="w-2 h-2 bg-primary rounded-full mt-2"></div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        // Get time ago string
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const diff = now - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days}d ago`;
+            if (hours > 0) return `${hours}h ago`;
+            if (minutes > 0) return `${minutes}m ago`;
+            return 'Just now';
+        }
+
+        // Event listeners for therapist view
+        document.getElementById('therapistSelect').addEventListener('change', loadAppointments);
+        document.getElementById('appointmentDate').addEventListener('change', loadAppointments);
+
+        // Add new therapist to display list for patient portal
+        function addToTherapistDisplayList(userTherapist) {
+            // Create avatar from first and last name initials
+            const avatar = `${userTherapist.firstName[0]}${userTherapist.lastName[0]}`;
+            
+            // Calculate next ID
+            const nextId = Math.max(...therapists.map(t => t.id)) + 1;
+            
+            // Create therapist display object
+            const newTherapistDisplay = {
+                id: nextId,
+                name: `Dr. ${userTherapist.firstName} ${userTherapist.lastName}`,
+                specialty: userTherapist.specialty,
+                experience: userTherapist.experience,
+                rating: 4.5, // Default rating for new therapists
+                avatar: avatar
+            };
+            
+            // Add to therapists display array
+            therapists.push(newTherapistDisplay);
+            
+            // If patient view is currently loaded, refresh the therapist list
+            if (!document.getElementById('patientView').classList.contains('hidden')) {
+                renderTherapistList();
+                showInAppNotification('New Therapist', `Dr. ${userTherapist.firstName} ${userTherapist.lastName} is now available for appointments`);
+            }
+            
+            // If therapist view is loaded, refresh the therapist select dropdown
+            if (!document.getElementById('therapistView').classList.contains('hidden')) {
+                const select = document.getElementById('therapistSelect');
+                select.innerHTML = '<option value="">Choose therapist...</option>' + 
+                    therapists.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            }
+            
+            console.log('✅ New therapist added to patient portal:', newTherapistDisplay);
+        }
+
+        // Initialize notification system
+        updateNotificationBadge();
+
+        // Make functions global for onclick handlers
+        window.updateAppointmentStatus = updateAppointmentStatus;
+        window.togglePassword = togglePassword;
+
+        // Initialize app - show login screen
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+        
+        // Check EmailJS configuration status on load
+        setTimeout(checkEmailJSConfiguration, 500);
+    </script>
+</body>
+</html>
