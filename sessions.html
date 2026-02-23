@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Physiotherapy Sessions Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+        }
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Physiotherapy Sessions Dashboard</h2>
+    <div class="grid">
+
+        <div class="card">
+            <h4>Active Patients</h4>
+            <canvas id="activeChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h4>School Patients</h4>
+            <canvas id="schoolChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h4>Stop Coming (Physiotherapy)</h4>
+            <canvas id="stopPhysioChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h4>Complete Sessions</h4>
+            <canvas id="completeChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h4>Sick Patient</h4>
+            <canvas id="sickChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h4>Passed Away Patients</h4>
+            <canvas id="passedChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h4>Stop Coming Patients</h4>
+            <canvas id="stopComingChart"></canvas>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function createChart(id, total, used, remaining) {
+    new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: {
+            labels: ['Total', 'Used', 'Remaining'],
+            datasets: [{
+                data: [total, used, remaining],
+                backgroundColor: ['#4e73df', '#e74a3b', '#1cc88a'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+// ===== Calculated Totals From Your Table =====
+
+// Active Patients
+createChart("activeChart", 4442, 2019, 2423);
+
+// School Patients
+createChart("schoolChart", 1272, 287, 985);
+
+// Stop Coming to Physiotherapy
+createChart("stopPhysioChart", 1538, 449, 1089);
+
+// Complete Sessions
+createChart("completeChart", 48, 48, 0);
+
+// Sick Patient
+createChart("sickChart", 48, 48, 0);
+
+// Passed Away Patients
+createChart("passedChart", 570, 415, 155);
+
+// Stop Coming Patients
+createChart("stopComingChart", 48, 0, 48);
+
+</script>
+
+</body>
+</html>
